@@ -1,0 +1,5 @@
+https://github.com/node-facebook/facebook-node-sdk
+
+https://www.npmjs.com/package/facebook-send-api
+
+https://www.npmjs.com/package/fb-signed-parser
