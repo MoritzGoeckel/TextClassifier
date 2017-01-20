@@ -13,7 +13,7 @@ var merkmale = [
     {"name":"fdp", "seiten":["FDP", "fdp.dieliberalen", "fdpbw", "fdpnrw", "fdprlp"]},
     {"name":"christentum", "seiten":["Jesus-täglich-erleben-245097428843878", "Jesus-lebt-164528340324604", "Jesus.Die.Einzige.Hoffnung"]},
     {"name":"islam", "seiten":["IslamDerSchluesselZumParadies", "islamfaktenoffiziell"]},
-    {"name":"antifa", "seiten":["Antifaschistisches-Aktionsbündnis-Stuttgart-und-Region-260705110668693", ""]},
+    {"name":"antifa", "seiten":["Antifaschistisches-Aktionsbündnis-Stuttgart-und-Region-260705110668693"]},
     {"name":"npd", "seiten":["npd.de", "npd.sachsen", "afdnpd", "npdnrw", "npdmup"]},
  ];
 
