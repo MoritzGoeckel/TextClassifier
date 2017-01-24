@@ -1,10 +1,10 @@
-var request = require('request');
-var redis = require("redis");
+const request = require('request');
+const redis = require("redis");
 
-var token = "?access_token=829794167161240|f3f1697d5230b58304a9d0dc2bbf788e";
-var baseUrl = "https://graph.facebook.com/";
+const token = "?access_token=829794167161240|f3f1697d5230b58304a9d0dc2bbf788e";
+const baseUrl = "https://graph.facebook.com/";
 
-var merkmale = [
+const merkmale = [
     {"name":"afd", "seiten":["alternativefuerde", "AfDNuernberg", "afdrheinlandpfalz", "AfD.Thueringen", "AfDfuerNRW", "SachsenAnhalt.AfD", "AfD.BW", "AfD.Schleswig.Holstein.de", "AfDSaar"]},
     {"name":"spd", "seiten":["sigmar.gabriel", "SPD", "spdbw", "spdbundestagsfraktion", "spdhamburg", "spdstuttgart", "SPDStuttgartOst", "SPD.Berlin", "spdnds"]},
     {"name":"cdu", "seiten":["AngelaMerkel", "CDU", "cduberlin", "CDU.BW", "cduhessen", "CDUnrw", "cducsubundestagsfraktion", "cdusaar", "cdush", "cduhamburg"]},
@@ -17,9 +17,12 @@ var merkmale = [
     {"name":"npd", "seiten":["npd.de", "npd.sachsen", "afdnpd", "npdnrw", "npdmup"]},
  ];
 
-var thePage = "SPD";
-
 //Executing
+
+let timeOffset = 0;
+let requests = 0;
+let requestsToDo = 0;
+let commentCount = 0;
 
 client = redis.createClient();
 client.on('connect', function() {
@@ -33,46 +36,49 @@ client.on('connect', function() {
                 console.log(keys);
             });*/
 
-            downloadPages(baseUrl + thePage + "/posts" + token, gotPostsPage);
+            for(let m = 0; m < merkmale.length; m++)
+                for(let s in merkmale[m].seiten)
+                    downloadPages(baseUrl + merkmale[0].seiten[s] + "/posts" + token, gotPostsPage, {label:merkmale[0].name, page:merkmale[0].seiten[s]});
         }
     });
 });
 
+function gotPostsPage(posts, callbackArg, getPreviousPage, getNextPage){
 
+    if(posts != undefined)
+        for(let i in posts)
+        {
+            if(posts[i].message != "" && posts[i].message != " " && posts[i].message != null && posts[i].message != undefined)
+                client.lpush(callbackArg.label + "_" + callbackArg.page, posts[i].message, function(err, reply){if(err != null) console.log(err);});
 
-//downloadPages(baseUrl + "adidas" + "/posts" + token, gotPostsPage);
-//downloadPages(baseUrl + "182162001806727_10155244874798888" + "/comments" + token, gotCommentsPage);
+            downloadPages(baseUrl + posts[i].id + "/comments" + token, gotCommentsPage, callbackArg);
+        }
+    else
+        console.log("Posts undefined :(");
 
-function gotPostsPage(posts, getPreviousPage, getNextPage){
-    console.log(posts.length);
-
-    for(let i in posts)
-    {
-        if(posts[i].message != "" && posts[i].message != " " && posts[i].message != null && posts[i].message != undefined)
-            client.lpush(thePage, posts[i].message, function(err, reply){if(err != null) console.log(err);});
-
-        downloadPages(baseUrl + posts[i].id + "/comments" + token, gotCommentsPage);
-    }
-
-    console.log(getPreviousPage);
-    console.log(getNextPage);
+    //console.log(getPreviousPage);
+    //console.log(getNextPage);
 
     if(getNextPage != undefined)
         getNextPage();
 }
 
-function gotCommentsPage(comments, getPreviousPage, getNextPage)
+function gotCommentsPage(comments, callbackArg, getPreviousPage, getNextPage)
 {
-    console.log(comments.length);
-
-    for(let i in comments)
+    if(comments != undefined)
     {
-        if(comments[i].message != "" && comments[i].message != " " && comments[i].message != null && comments[i].message != undefined)        
-            client.lpush(thePage, comments[i].message, function(err, reply){if(err != null) console.log(err);});
+        console.log("= " + (commentCount += comments.length));
+        for(let i in comments)
+        {
+            if(comments[i].message != "" && comments[i].message != " " && comments[i].message != null && comments[i].message != undefined)        
+                client.lpush(callbackArg.label + "_" + callbackArg.page, comments[i].message, function(err, reply){if(err != null) console.log(err);});
+        }
     }
+    else
+        console.log("Comments undefined :(");
 
-    console.log(getPreviousPage);
-    console.log(getNextPage);
+    //console.log(getPreviousPage);
+    //console.log(getNextPage);
 
     if(getNextPage != undefined)
         getNextPage();
@@ -80,41 +86,46 @@ function gotCommentsPage(comments, getPreviousPage, getNextPage)
 
 //Supporting function
 
-function downloadPages(url, callback)
+function downloadPages(url, callback, callbackArg)
 {   
-    request(url, function(error, response, body){
-        
-        let res;
-        try {
-            res = JSON.parse(body);
-        }catch(e){
-            console.log("JSON ERROR: ");
-            console.log(e);
-            console.log("Body:");
-            console.log(body);
-            console.log("Response:");
-            console.log(response);
-            callback([], undefined, undefined);
-        }
+    requestsToDo++;
+    setTimeout(function(){
+        request(url, function(error, response, body){
+            
+            console.log("Requests done: " + requests++ + " / " + requestsToDo + " (" + (requests / requestsToDo) + ")");
 
-        if(res != undefined)
-        {
-            let getNextPage;
-            let getPreviousPage;
-
-            if(res.paging != undefined)
-            {
-                if(res.paging.previous != undefined)
-                {
-                    getPreviousPage = function(){downloadPages(res.paging.previous, callback);};
-                }
-
-                if(res.paging.next != undefined){
-                    getNextPage = function(){downloadPages(res.paging.next, callback);};
-                }
+            let res;
+            try {
+                res = JSON.parse(body);
+            }catch(e){
+                console.log("JSON ERROR: ");
+                console.log(e);
+                console.log("Body:");
+                console.log(body);
+                console.log("Response:");
+                console.log(response);
+                callback([], callbackArg, undefined, undefined);
             }
 
-            callback(res.data, getPreviousPage, getNextPage);
-        }
-    });
+            if(res != undefined)
+            {
+                let getNextPage;
+                let getPreviousPage;
+
+                if(res.paging != undefined)
+                {
+                    if(res.paging.previous != undefined)
+                    {
+                        getPreviousPage = function(){downloadPages(res.paging.previous, callback, callbackArg);};
+                    }
+
+                    if(res.paging.next != undefined){
+                        getNextPage = function(){downloadPages(res.paging.next, callback, callbackArg);};
+                    }
+                }
+
+                callback(res.data, callbackArg, getPreviousPage, getNextPage);
+            }
+        });
+    }, timeOffset += 25);
 }
