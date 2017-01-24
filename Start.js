@@ -1,4 +1,4 @@
-const request = require('request');
+const DownloadQueue = require('./Includes/DownloadQueue.js');
 const redis = require("redis");
 
 const token = "?access_token=829794167161240|f3f1697d5230b58304a9d0dc2bbf788e";
@@ -19,9 +19,7 @@ const merkmale = [
 
 //Executing
 
-let timeOffset = 0;
-let requests = 0;
-let requestsToDo = 0;
+let que = new DownloadQueue(5);
 let commentCount = 0;
 
 client = redis.createClient();
@@ -38,7 +36,8 @@ client.on('connect', function() {
 
             for(let m = 0; m < merkmale.length; m++)
                 for(let s in merkmale[m].seiten)
-                    downloadPages(baseUrl + merkmale[0].seiten[s] + "/posts" + token, gotPostsPage, {label:merkmale[0].name, page:merkmale[0].seiten[s]});
+                    //if(merkmale[m].name == "npd")
+                    downloadPages(baseUrl + merkmale[0].seiten[s] + "/posts" + token, gotPostsPage, {label:merkmale[m].name, page:merkmale[m].seiten[s]});
         }
     });
 });
@@ -67,7 +66,9 @@ function gotCommentsPage(comments, callbackArg, getPreviousPage, getNextPage)
 {
     if(comments != undefined)
     {
-        console.log("= " + (commentCount += comments.length));
+        console.log((commentCount += comments.length / 1000) + "K comments");
+        console.log(que.getOpenConnections() + "c " + que.getQueueLength() + "L");
+        
         for(let i in comments)
         {
             if(comments[i].message != "" && comments[i].message != " " && comments[i].message != null && comments[i].message != undefined)        
@@ -88,44 +89,42 @@ function gotCommentsPage(comments, callbackArg, getPreviousPage, getNextPage)
 
 function downloadPages(url, callback, callbackArg)
 {   
-    requestsToDo++;
-    setTimeout(function(){
-        request(url, function(error, response, body){
-            
-            console.log("Requests done: " + requests++ + " / " + requestsToDo + " (" + (requests / requestsToDo) + ")");
+    que.enqueDownload(url, function(respUrl, error, response, body){  
 
-            let res;
-            try {
-                res = JSON.parse(body);
-            }catch(e){
-                console.log("JSON ERROR: ");
-                console.log(e);
-                console.log("Body:");
-                console.log(body);
-                console.log("Response:");
-                console.log(response);
-                callback([], callbackArg, undefined, undefined);
-            }
+        if(error != null)
+            console.log(error);
 
-            if(res != undefined)
+        let res;
+        try {
+            res = JSON.parse(body);
+        }catch(e){
+            console.log("JSON ERROR: ");
+            console.log(e);
+            console.log("Body:");
+            console.log(body);
+            console.log("Response:");
+            console.log(response);
+            callback([], callbackArg, undefined, undefined);
+        }
+
+        if(res != undefined)
+        {
+            let getNextPage;
+            let getPreviousPage;
+
+            if(res.paging != undefined)
             {
-                let getNextPage;
-                let getPreviousPage;
-
-                if(res.paging != undefined)
+                if(res.paging.previous != undefined)
                 {
-                    if(res.paging.previous != undefined)
-                    {
-                        getPreviousPage = function(){downloadPages(res.paging.previous, callback, callbackArg);};
-                    }
-
-                    if(res.paging.next != undefined){
-                        getNextPage = function(){downloadPages(res.paging.next, callback, callbackArg);};
-                    }
+                    getPreviousPage = function(){downloadPages(res.paging.previous, callback, callbackArg);};
                 }
 
-                callback(res.data, callbackArg, getPreviousPage, getNextPage);
+                if(res.paging.next != undefined){
+                    getNextPage = function(){downloadPages(res.paging.next, callback, callbackArg);};
+                }
             }
-        });
-    }, timeOffset += 25);
+
+            callback(res.data, callbackArg, getPreviousPage, getNextPage);
+        }
+    });
 }
