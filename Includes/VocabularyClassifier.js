@@ -111,6 +111,12 @@ module.exports = class VocabularyClassifier{
             let scores = [];
             let normalizedQuery = theBase.normalizeText(query);
 
+            if(normalizedQuery.length == 0)
+            {
+                callback({"error":"nothing to analyse", "input":query});
+                return;   
+            }
+
             let wightsDone = 0;
 
             let labelTotalCounts = new Array(labels.length);
@@ -142,6 +148,10 @@ module.exports = class VocabularyClassifier{
 
         let reduceResult = function(words, reduceMethod){
             let reduced;
+
+            if(words.length == undefined)
+                return [];
+
             for(let w in words)
                 if(words[w].result != undefined)
                 {
@@ -149,26 +159,32 @@ module.exports = class VocabularyClassifier{
                     break;
                 }
 
+            if(reduced == undefined)
+                return [];
+
             for(let w in words)
             {
-                if(words[w].result != undefined)
-                    for(let r in words[w].result)
-                    {
-                        if(reduced[r] == undefined)
-                            reduced[r] = {label:words[w].result[r].label, score:0}; //To change if you want multiply reduce
-                        
-                        if(words[w].result[r].label != reduced[r].label)
-                            throw new Error(words[w].result[r].label + "!=" + reduced[r].label);
+                for(let r in words[w].result)
+                {
+                    if(reduced[r] == undefined)
+                        reduced[r] = {label:words[w].result[r].label, score:0}; 
+                        //Change start the value if you want a multiply reduce
+                    
+                    if(words[w].result[r].label != reduced[r].label)
+                        throw new Error(words[w].result[r].label + "!=" + reduced[r].label);
 
-                        if(words[w].result[r].score != null && words[w].result[r].score != undefined && words[w].result[r].score != NaN && words[w].result[r].min != 100000000 && words[w].result[r].avg != 0)
-                            reduced[r].score += parseFloat(words[w].result[r].score); //Plus is the reduce method
-                    }
+                    reduced[r].score += parseFloat(words[w].result[r].score); 
+                    //Plus is the reduce method, you can change it to multiply if you want
+                }
             }
 
 
             let sum = 0;
             for(let r in reduced)
                 sum += reduced[r].score
+
+            if(sum == 0)
+                sum = 1;
 
             for(let r in reduced) //Normalize
                 reduced[r].score /= sum;
