@@ -1,5 +1,5 @@
 #Vocabulary Classifier
-Supervised learning for text classification based on vocabulary analysis. It depends on redis and is supposed to handle huge amounts of data for training.
+Supervised learning for text classification based on vocabulary analysis for NodeJS. It depends on redis and is supposed to handle huge amounts of data for training.
 
 ##API
 ``` Javascript
@@ -65,10 +65,7 @@ client.on('connect', function() {
 ##Example result of .classifyText(...)
 The word for word result
 ``` Javascript
-            "min": 0
-         }
-      ]
-   },
+[
    {
       "word": "ist",
       "result": [
@@ -89,7 +86,8 @@ The word for word result
             "min": 0
          }
       ]
-   }
+   },
+   ...
 ]
 ```
 
