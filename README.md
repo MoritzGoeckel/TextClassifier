@@ -63,7 +63,7 @@ client.on('connect', function() {
 ```
 
 ##Example result of .classifyText(...)
-###The word for word result
+The word for word result
 ``` Javascript
             "min": 0
          }
@@ -93,9 +93,11 @@ client.on('connect', function() {
 ]
 ```
 
-###The overall text result
+The overall text result. This text is obviously german. 
 ``` Javascript
 [ { label: 'german', score: 3 },
   { label: 'english', score: -1 } ]
 ```
-This text is obviously german. 
+
+##Dependencies
+* redis
