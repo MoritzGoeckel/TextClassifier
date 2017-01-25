@@ -1,5 +1,5 @@
 #Vocabulary Classifier
-Supervised learning for text classification based on vocabulary analysis. There is also an downloader for facebook pages included.  
+Supervised learning for text classification based on vocabulary analysis.
 
 ##API
 ``` Javascript
