@@ -1,5 +1,5 @@
 #Vocabulary Classifier
-Supervised learning for text classification based on vocabulary analysis.
+Supervised learning for text classification based on vocabulary analysis. It depends on redis and is supposed to handle huge amounts of data for training.
 
 ##API
 ``` Javascript
