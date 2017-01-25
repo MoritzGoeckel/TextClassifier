@@ -188,8 +188,23 @@ module.exports = class VocabularyClassifier{
         });
     }
 
-    removeLabel(labelName)
+    removeLabel(labelName, callback)
     {
+        this.redis.del("totalwordcount_" + labelName, "wordcount_" + labelName, function(err, res){
+            if(err != null)
+                console.log(err);
+            
+            callback();
+        });
+    }
 
+    getLabelWordCount(labelName, callback)
+    {
+        this.redis.get("totalwordcount_" + labelName, function(err, res){
+            if(err != null)
+                console.log(err);
+            
+            callback(res);
+        });
     }
 }
