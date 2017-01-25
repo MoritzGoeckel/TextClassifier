@@ -43,8 +43,8 @@ module.exports = class VocabularyClassifier{
         let totalWordsAdded = 0;
         let normalizedWords = this.normalizeText(text);
         for(let i in normalizedWords){
-            totalWordsAdded += updates[i].count;
-            this.redis.zincrby("wordcount_" + labelName, updates[i].count, updates[i].word, function(err, res){
+            totalWordsAdded += normalizedWords[i].count;
+            this.redis.zincrby("wordcount_" + labelName, normalizedWords[i].count, normalizedWords[i].word, function(err, res){
                 if(err != null)
                     console.log(err);
                 
@@ -54,7 +54,7 @@ module.exports = class VocabularyClassifier{
             });
         }
 
-        this.redis.incr("totalwordcount_" + labelName, totalWordsAdded, function(err, res){
+        this.redis.incrby("totalwordcount_" + labelName, totalWordsAdded, function(err, res){
             if(err != null)
                 console.log(err);
         });
@@ -165,10 +165,10 @@ module.exports = class VocabularyClassifier{
                     for(let r in words[w].result)
                     {
                         if(reduced[r] == undefined)
-                            reduced[r] = {category:words[w].result[r].category, score:1}; //0
+                            reduced[r] = {label:words[w].result[r].label, score:1}; //0
                         
-                        if(words[w].result[r].category != reduced[r].category)
-                            throw new Error(words[w].result[r].category + "!=" + reduced[r].category);
+                        if(words[w].result[r].label != reduced[r].label)
+                            throw new Error(words[w].result[r].label + "!=" + reduced[r].label);
 
                         if(words[w].result[r].score != null && words[w].result[r].score != undefined && words[w].result[r].score != NaN && words[w].result[r].min != 100000000 &&  words[w].result[r].avg != 0)
                             reduced[r].score = reduceMethod(parseFloat(reduced[r].score), words[w].result[r]); 
@@ -194,7 +194,8 @@ module.exports = class VocabularyClassifier{
             if(err != null)
                 console.log(err);
             
-            callback();
+            if(callback != undefined)
+                callback();
         });
     }
 

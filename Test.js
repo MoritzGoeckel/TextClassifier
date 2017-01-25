@@ -13,17 +13,19 @@ client.on('connect', function() {
         {
             classifier = new VocabularyClassifier(client);
 
-            classifier.trainLabel("german", "dies ist ein deutscher text", function(){
+            classifier.trainLabel("german", "dies ist ein deutscher text text", function(){
                 classifier.trainLabel("english", "this is an english text", function(){
-                    classifier.classifyText(["german", "english"], "dies ist english", function(result, reduced){
+                    classifier.classifyText(["german", "english"], "dies ist", function(result, reduced){
+                        console.log(JSON.stringify(result, null, 3));
                         console.log(reduced);
+                        
+                        classifier.removeLabel("german");
+                        classifier.removeLabel("english");
                     });
                 });
             });
-            
-            classifier.removeLabel("german");
-            classifier.removeLabel("english");
-            
+
+            //End            
         } 
     });
 });
