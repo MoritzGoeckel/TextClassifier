@@ -208,4 +208,19 @@ module.exports = class VocabularyClassifier{
             callback(res);
         });
     }
+
+    getLabels(callback)
+    {
+        this.redis.keys("totalwordcount_*", function(err, res){
+            if(err != null)
+                console.log(err);
+            
+            for(let i in res)
+            {
+                res[i] = res[i].replace("totalwordcount_", "");
+            }
+
+            callback(res);
+        });
+    }
 }
