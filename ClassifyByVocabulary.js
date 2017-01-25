@@ -10,18 +10,53 @@ const client = redis.createClient();
 
 function getScoresForWord(word, callback)
 {
-    let results = {word:word};
+    let results = [];
     for(let m = 0; m < merkmale.length; m++) //Iterate merkmale
     {
         client.hget("wighted_"+ merkmale[m].name, word, function(err, res){
                 if(err != null){
                     console.log(err);
-                    results[merkmale[m].name] = NaN;
+                    results.push({category:merkmale[m].name, score:NaN});
                 }
+                else
+                    results.push({category:merkmale[m].name, score:res});
 
-                results[merkmale[m].name] = res;
-                if(Object.keys(results).length - 1 >= merkmale.length)
+                //When finished
+                if(results.length >= merkmale.length)
+                {
+                    let avg = 0;
+                    let avgEntries = 0;
+
+                    let min = 100000000;
+                    for(let r in results)
+                    {
+                        //Avg
+                        if(results[r].score != NaN && results[r].score != null)
+                        {
+                            avg += parseFloat(results[r].score);
+                            avgEntries++;
+
+                            //Min
+                            if(parseFloat(results[r].score) < min)
+                                min = parseFloat(results[r].score);
+                        }
+                    }
+
+                    avg /= avgEntries;
+
+                    for(let r in results)
+                    {
+                        if(avgEntries != 0)
+                        {
+                            results[r].avg = avg;
+                            results[r].avgNormalizedScore = results[r].score - avg;
+                            results[r].minNormalizedScore = results[r].score - min;
+                            results[r].min = min;
+                        }
+                    }
+
                     callback(results);
+                }
             });
     } //Iterate merkmale
 }
@@ -37,53 +72,57 @@ function getQueryScore(query, callback){
         //Check if word is okay and incr it at the words list of the merkmal
         let word = words[w];
 
-        let usedWord = "";
+        let normalized = "";
         for(let c in word)
             if(allowedSigns.indexOf(word[c]) != -1)
-                usedWord += word[c];
-
-        if(usedWord != undefined && usedWord != null && usedWord != "" && usedWord != " ")
+                normalized += word[c];
+        
+        if(normalized != undefined && normalized != null && normalized != "" && normalized != " ")
         {
             //Do something with used words
-            getScoresForWord(usedWord, function(result){
-                scores.push(result);
+            getScoresForWord(normalized, function(result){
+                scores.push({word:word, normalized:normalized, result:result});
                 if(scores.length == words.length)
                     callback(scores);
             });
         }
         else
         {
-            scores.push({"word":word, "usedWord":usedWord, "error":"invalid_word"});
+            scores.push({"word":word, "normalized":normalized, "error":"invalid_word"});
             if(scores.length == words.length)
                 callback(scores);
         }
     }
 }
 
-function reduceResult(result){
-    let reduced = {};
-    for(let w in result)
-    {
-        for(let k in result[w])
+function reduceResult(words, reduceMethod){
+
+    let reduced;
+    for(let w in words)
+        if(words[w].result != undefined)
         {
-            if(k != "word" && k != "error" && k != "used_word")
-            {
-                if(reduced[k] == undefined)
-                    reduced[k] = 1; //0
-                
-                reduced[k] *= result[w][k];
-            }
+            reduced = new Array(words[w].result.length);
+            break;
         }
-    }
 
-    let sorted = [];
-    for(let k in reduced)
+    for(let w in words)
     {
-        sorted.push({category:k, score:reduced[k]});
-    }
-    sorted.sort(function(a, b){return b.score - a.score});
+        if(words[w].result != undefined)
+            for(let r in words[w].result)
+            {
+                if(reduced[r] == undefined)
+                    reduced[r] = {category:words[w].result[r].category, score:1}; //0
+                
+                if(words[w].result[r].category != reduced[r].category)
+                    throw new Error(words[w].result[r].category + "!=" + reduced[r].category);
 
-    return sorted;
+                if(words[w].result[r].score != null && words[w].result[r].score != undefined && words[w].result[r].score != NaN && words[w].result[r].min != 100000000 &&  words[w].result[r].avg != 0)
+                    reduced[r].score = reduceMethod(parseFloat(reduced[r].score), words[w].result[r]); 
+            }
+    }
+
+    reduced.sort(function(a, b){return b.score - a.score});
+    return reduced;
 }
 
 client.on('connect', function() {
@@ -92,12 +131,19 @@ client.on('connect', function() {
             console.log(err)
         else
         {
-            getQueryScore("cdu", function(result){
-                console.log(result);
+            let msg = "Rechtsruck Strasse";
+            
+            getQueryScore(msg, function(result){
+                console.log(JSON.stringify(result, null, 3));
                 console.log("");
-                let reduced = reduceResult(result);
-                console.log(reduced);
+
+                let reducedAddition = reduceResult(result, function(oldScore, obj){
+                    return oldScore + (parseFloat(obj.avgNormalizedScore) / parseFloat(obj.avg)); //Gewichte seltene worte höher
+                });
+
+                console.log(reducedAddition);
                 console.log(" ");
+                
             });
         } // no error connecting
     });
