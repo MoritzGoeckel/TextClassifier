@@ -1,6 +1,4 @@
 const Data = require("./Includes/data.js");
-const Syncer = require("./Includes/Syncer.js");
-
 const redis = require("redis");
 
 var allowedSigns = "1234567890ßqwertzuiopüasdfghjklöäyxcvbnm";
