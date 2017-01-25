@@ -43,8 +43,8 @@ client.on('connect', function() {
                 
                 //Output the result for the entire text
                 console.log(reduced);
-                // > [ { label: 'german', score: 3 },
-                //     { label: 'english', score: -1 } ]
+                // > [ { label: 'german', score: 0.875 },
+                //     { label: 'english', score: 0.125 } ]
 
                 //Output the trained labels
                 classifier.getLabels(function(result){
@@ -67,23 +67,17 @@ The word for word result
 ``` Javascript
 [
    {
-      "word": "ist",
+      "word": "text",
       "result": [
          {
             "label": "german",
-            "score": 0.16666666666666666,
-            "avg": 0.08333333333333333,
-            "avgNormalizedScore": 0.08333333333333333,
-            "minNormalizedScore": 0.16666666666666666,
-            "min": 0
+            "partOfLanguage": 0.3333333333333333,
+            "score": 0.625
          },
          {
             "label": "english",
-            "score": 0,
-            "avg": 0.08333333333333333,
-            "avgNormalizedScore": -0.08333333333333333,
-            "minNormalizedScore": 0,
-            "min": 0
+            "partOfLanguage": 0.2,
+            "score": 0.375
          }
       ]
    },
@@ -93,8 +87,8 @@ The word for word result
 
 The overall text result. This text is obviously german. 
 ``` Javascript
-[ { label: 'german', score: 3 },
-  { label: 'english', score: -1 } ]
+[ { label: 'german', score: 0.875 },
+  { label: 'english', score: 0.125 } ]
 ```
 
 ##Dependencies

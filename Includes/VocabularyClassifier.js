@@ -64,50 +64,51 @@ module.exports = class VocabularyClassifier{
     {
         let theBase = this;
 
-        let getScoresForWord = function(word, labelWights, callback)
+        let getScoresForWord = function(word, labelTotalCounts, callback)
         {
             let results = [];
             for(let m = 0; m < labels.length; m++) //Iterate label
             {
-                theBase.redis.zscore("wordcount_" + labels[m], word, function(err, res){
+                theBase.redis.zscore("wordcount_" + labels[m], word, function(err, count){
                     if(err != null){
                         console.log(err);
-                        results.push({label:labels[m], score:NaN});
+                        results.push({label:labels[m], partOfLanguage:NaN});
                     }
                     else
-                        results.push({label:labels[m], score:res / labelWights[m]});
+                        results.push({label:labels[m], partOfLanguage:count / labelTotalCounts[m]});
 
                     //When finished
                     if(results.length >= labels.length)
                     {
-                        let avg = 0;
-                        let avgEntries = 0;
+                        let sum = 0;
+                        let entries = 0;
 
-                        let min = 100000000;
+                        //let min = 100000000;
                         for(let r in results)
                         {
-                            if(results[r].score != NaN && results[r].score != null)
+                            if(results[r].partOfLanguage != NaN && results[r].partOfLanguage != null)
                             {
                                 //Avg
-                                avg += parseFloat(results[r].score);
-                                avgEntries++;
+                                sum += parseFloat(results[r].partOfLanguage);
+                                entries++;
 
                                 //Min
-                                if(parseFloat(results[r].score) < min)
-                                    min = parseFloat(results[r].score);
+                                //if(parseFloat(results[r].partOfLanguage) < min)
+                                //    min = parseFloat(results[r].partOfLanguage);
                             }
                         }
 
-                        avg /= avgEntries;
+                        //let avg = sum / entries;
 
                         for(let r in results)
                         {
-                            if(avgEntries != 0)
+                            if(entries != 0)
                             {
-                                results[r].avg = avg;
-                                results[r].avgNormalizedScore = results[r].score - avg;
-                                results[r].minNormalizedScore = results[r].score - min;
-                                results[r].min = min;
+                                //results[r].avg = avg;
+                                //results[r].min = min;
+                                //results[r].avgNormalizedScore = results[r].partOfLanguage - avg;
+                                //results[r].minNormalizedScore = results[r].partOfLanguage - min;
+                                results[r].score = results[r].partOfLanguage / sum;
                             }
                         }
 
@@ -123,7 +124,7 @@ module.exports = class VocabularyClassifier{
 
             let wightsDone = 0;
 
-            let labelWights = new Array(labels.length);
+            let labelTotalCounts = new Array(labels.length);
             for(let l in labels)
             {
                 theBase.redis.get("totalwordcount_" + labels[l], function(err, res)
@@ -131,15 +132,15 @@ module.exports = class VocabularyClassifier{
                     if(err != null)
                         console.log(err);
 
-                    labelWights[l] = parseFloat(res);
+                    labelTotalCounts[l] = parseFloat(res);
                     wightsDone++;
 
                     //Done taking all the wights
-                    if(wightsDone >= labelWights.length)
+                    if(wightsDone >= labelTotalCounts.length)
                     {
                         for(let i in normalizedQuery)
                         {
-                            getScoresForWord(normalizedQuery[i].word, labelWights, function(result){
+                            getScoresForWord(normalizedQuery[i].word, labelTotalCounts, function(result){
                                 scores.push({word:normalizedQuery[i].word, result:result});
                                 if(scores.length == normalizedQuery.length)
                                     callback(scores);
@@ -165,15 +166,23 @@ module.exports = class VocabularyClassifier{
                     for(let r in words[w].result)
                     {
                         if(reduced[r] == undefined)
-                            reduced[r] = {label:words[w].result[r].label, score:1}; //0
+                            reduced[r] = {label:words[w].result[r].label, score:0}; //To change if you want multiply reduce
                         
                         if(words[w].result[r].label != reduced[r].label)
                             throw new Error(words[w].result[r].label + "!=" + reduced[r].label);
 
-                        if(words[w].result[r].score != null && words[w].result[r].score != undefined && words[w].result[r].score != NaN && words[w].result[r].min != 100000000 &&  words[w].result[r].avg != 0)
-                            reduced[r].score = reduceMethod(parseFloat(reduced[r].score), words[w].result[r]); 
+                        if(words[w].result[r].score != null && words[w].result[r].score != undefined && words[w].result[r].score != NaN && words[w].result[r].min != 100000000 && words[w].result[r].avg != 0)
+                            reduced[r].score += parseFloat(words[w].result[r].score); //Plus is the reduce method
                     }
             }
+
+
+            let sum = 0;
+            for(let r in reduced)
+                sum += reduced[r].score
+
+            for(let r in reduced) //Normalize
+                reduced[r].score /= sum;
 
             reduced.sort(function(a, b){return b.score - a.score});
             return reduced;
@@ -181,10 +190,7 @@ module.exports = class VocabularyClassifier{
 
         //The actual execution
         getQueryScore(text, function(result){
-            let additionReduced = reduceResult(result, function(oldScore, obj){
-                return oldScore + (parseFloat(obj.avgNormalizedScore) / parseFloat(obj.avg)); //Gewichte seltene worte höher
-            });
-            callback(result, additionReduced);
+            callback(result, reduceResult(result));
         });
     }
 

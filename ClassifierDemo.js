@@ -21,7 +21,7 @@ client.on('connect', function() {
             classifier.trainLabel("english", "this is an english text", function(){
                 
                 //Classify a new text
-                classifier.classifyText(["german", "english"], "dies ist", function(result, reduced){
+                classifier.classifyText(["german", "english"], "dies ist text", function(result, reduced){
                     
                     //Output the result for every word
                     console.log(JSON.stringify(result, null, 3));
