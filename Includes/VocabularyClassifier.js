@@ -88,28 +88,17 @@ module.exports = class VocabularyClassifier{
                         {
                             if(results[r].partOfLanguage != NaN && results[r].partOfLanguage != null)
                             {
-                                //Avg
                                 sum += parseFloat(results[r].partOfLanguage);
                                 entries++;
-
-                                //Min
-                                //if(parseFloat(results[r].partOfLanguage) < min)
-                                //    min = parseFloat(results[r].partOfLanguage);
                             }
                         }
 
-                        //let avg = sum / entries;
-
                         for(let r in results)
                         {
-                            if(entries != 0)
-                            {
-                                //results[r].avg = avg;
-                                //results[r].min = min;
-                                //results[r].avgNormalizedScore = results[r].partOfLanguage - avg;
-                                //results[r].minNormalizedScore = results[r].partOfLanguage - min;
+                            if(entries != 0 && sum != 0)
                                 results[r].score = results[r].partOfLanguage / sum;
-                            }
+                            else
+                                results[r].score = 0;
                         }
 
                         callback(results);
