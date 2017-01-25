@@ -1,10 +1,10 @@
 const DownloadQueue = require('./Includes/DownloadQueue.js');
 const redis = require("redis");
+const VocabularyClassifier = require("./Includes/VocabularyClassifier.js");
+const Data = require("./Data/LabelsAndSites.js");
 
 const token = "?access_token=829794167161240|f3f1697d5230b58304a9d0dc2bbf788e";
 const baseUrl = "https://graph.facebook.com/";
-
-const Data = require("./Includes/data.js");
 
 //Executing
 
@@ -14,16 +14,14 @@ let que = new DownloadQueue(5);
 let commentCount = 0;
 
 client = redis.createClient();
+
+let classifier = new VocabularyClassifier(client);
+
 client.on('connect', function() {
     client.select(1, function(err, res){ 
         if(err != null)
             console.log(err)
         else{
-
-            //Main code
-            /*client.keys('*', function (err, keys) {
-                console.log(keys);
-            });*/
 
             for(let m = 0; m < merkmale.length; m++)
                 for(let s in merkmale[m].seiten)
@@ -38,7 +36,7 @@ function gotPostsPage(posts, callbackArg, getPreviousPage, getNextPage){
         for(let i in posts)
         {
             if(posts[i].message != "" && posts[i].message != " " && posts[i].message != null && posts[i].message != undefined)
-                client.lpush(callbackArg.label + "_" + callbackArg.page, posts[i].message, function(err, reply){if(err != null) console.log(err);});
+                classifier.trainLabel(callbackArg.label, posts[i].message);
 
             downloadPages(baseUrl + posts[i].id + "/comments" + token, gotCommentsPage, callbackArg);
         }
@@ -62,7 +60,7 @@ function gotCommentsPage(comments, callbackArg, getPreviousPage, getNextPage)
         for(let i in comments)
         {
             if(comments[i].message != "" && comments[i].message != " " && comments[i].message != null && comments[i].message != undefined)        
-                client.lpush(callbackArg.label + "_" + callbackArg.page, comments[i].message, function(err, reply){if(err != null) console.log(err);});
+                classifier.trainLabel(callbackArg.label, comments[i].message);
         }
     }
     else
@@ -76,7 +74,6 @@ function gotCommentsPage(comments, callbackArg, getPreviousPage, getNextPage)
 }
 
 //Supporting function
-
 function downloadPages(url, callback, callbackArg)
 {   
     que.enqueDownload(url, function(respUrl, error, response, body){  
