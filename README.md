@@ -91,5 +91,5 @@ The overall text result. This text is obviously german.
   { label: 'english', score: 0.125 } ]
 ```
 
-##Dependencies
+## Dependencies
 * redis
