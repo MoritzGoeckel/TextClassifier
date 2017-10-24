@@ -1,7 +1,7 @@
-#Vocabulary Classifier
+# Vocabulary Classifier
 Supervised learning for text classification based on vocabulary analysis for NodeJS. It depends on redis and is supposed to handle huge amounts of data for training.
 
-##API
+## API
 ``` Javascript
 new VocabularyClassifier(redisClient)
 .normalizeText(text)
@@ -12,7 +12,7 @@ new VocabularyClassifier(redisClient)
 .getLabels(callback)
 ```
 
-##Usage
+## Usage
 ``` Javascript
 //The classifier depends on redis
 const redis = require("redis"); 
@@ -62,7 +62,7 @@ client.on('connect', function() {
 });
 ```
 
-##Example result of .classifyText(...)
+## Example result of .classifyText(...)
 The word for word result
 ``` Javascript
 [
