@@ -3,7 +3,7 @@ Supervised learning for text classification based on vocabulary analysis for Nod
 
 ## API
 ``` Javascript
-new VocabularyClassifier(redisClient)
+new VocabularyClassifier(redisClient, ngrams)
 .normalizeText(text)
 .trainLabel(labelName, text, callback)
 .classifyText(labelsArray, text, callback)
@@ -24,7 +24,7 @@ const VocabularyClassifier = require("./VocabularyClassifier.js");
 const client = redis.createClient();
 
 //Create a instance of the Classifier
-let classifier = new VocabularyClassifier(client);
+let classifier = new VocabularyClassifier(client, 1);
 
 //Wait until redis is connected
 client.on('connect', function() {
