@@ -1,15 +1,16 @@
 module.exports = class VocabularyClassifier{
-    constructor(redis)
+    constructor(redis, combinations)
     {
         this.redis = redis;
         this.allowedSigns = "ßqwertzuiopüasdfghjklöäyxcvbnm";
+        this.wordCombinationsCount = combinations;
     }
 
     normalizeText(text)
     {
-        let dict = {};
         text = text.toLowerCase();
         
+        let normalizedWordsArray = [];
         let words = text.split(" ");
         for(let w in words)
         {
@@ -21,12 +22,35 @@ module.exports = class VocabularyClassifier{
                     normalizeWord += word[c];
 
             if(normalizeWord != undefined && normalizeWord != null && normalizeWord != "" && normalizeWord != " ")
+                normalizedWordsArray.push(normalizeWord);
+        }
+
+        let wordCombinations = [];
+        for(let i = 0; i < normalizedWordsArray.length; i++)
+        {
+            for(let b = 1; b <= this.wordCombinationsCount; b++)
             {
-                if(dict[normalizeWord] == undefined)
-                    dict[normalizeWord] = 1;
-                else
-                    dict[normalizeWord]++;
+                if(b + i <= normalizedWordsArray.length)
+                {
+                    let word = "";
+                    for(let c = 0; c < b; c++)
+                    {
+                        if(c == 0)
+                            word += normalizedWordsArray[c + i];
+                        else
+                            word += " " + normalizedWordsArray[c + i];
+                    }
+                    wordCombinations.push(word);
+                }
             }
+        }
+
+        let dict = {};
+        for(let i in wordCombinations){
+            if(dict[wordCombinations[i]] == undefined)
+                dict[wordCombinations[i]] = 1;
+            else
+                dict[wordCombinations[i]]++;
         }
 
         let outputArray = [];
@@ -37,7 +61,7 @@ module.exports = class VocabularyClassifier{
     }
 
     trainLabel(labelName, text, callback)
-    {
+    {                
         let updatesDone = 0;
 
         let totalWordsAdded = 0;
@@ -69,13 +93,13 @@ module.exports = class VocabularyClassifier{
             let results = [];
             for(let m = 0; m < labels.length; m++) //Iterate label
             {
-                theBase.redis.zscore("wordcount_" + labels[m], word, function(err, count){
+                theBase.redis.zscore("wordcount_" + labels[m].label, word, function(err, count){
                     if(err != null){
                         console.log(err);
-                        results.push({label:labels[m], partOfLanguage:NaN});
+                        results.push({label:labels[m].label, partOfLanguage:NaN});
                     }
                     else
-                        results.push({label:labels[m], partOfLanguage:count / labelTotalCounts[m]});
+                        results.push({label:labels[m].label, partOfLanguage:count / labelTotalCounts[m]});
 
                     //When finished
                     if(results.length >= labels.length)
@@ -122,7 +146,7 @@ module.exports = class VocabularyClassifier{
             let labelTotalCounts = new Array(labels.length);
             for(let l in labels)
             {
-                theBase.redis.get("totalwordcount_" + labels[l], function(err, res)
+                theBase.redis.get("totalwordcount_" + labels[l].label, function(err, res)
                 {
                     if(err != null)
                         console.log(err);
@@ -222,16 +246,20 @@ module.exports = class VocabularyClassifier{
 
     getLabels(callback)
     {
+        let theBase = this;
         this.redis.keys("totalwordcount_*", function(err, res){
             if(err != null)
                 console.log(err);
             
+            let output = [];
             for(let i in res)
             {
-                res[i] = res[i].replace("totalwordcount_", "");
+                theBase.redis.get(res[i], function(err2, res2){
+                    output.push({"label":res[i].replace("totalwordcount_", ""), "words":res2});
+                    if(output.length >= res.length)
+                        callback(output);
+                });
             }
-
-            callback(res);
         });
     }
 }
