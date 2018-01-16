@@ -12,7 +12,7 @@ client.on('connect', function() {
     client.select(1, function(err, res){ 
 
         //Create a instance of the Classifier
-        classifier = new VocabularyClassifier(client);
+        classifier = new VocabularyClassifier(client, 1);
 
         //Train the classifier with labeled data
         classifier.trainLabel("german", "dies ist ein deutscher text text", function(){
